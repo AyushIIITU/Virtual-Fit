@@ -159,6 +159,7 @@ def get_food_name_from_google(image_path):
         driver.quit()
 
 # Example usage
-image_path = "test-2.jpeg"
-food_names = get_food_name_from_google(image_path)
-print("Possible Food Names:", food_names)
+# image_path = "test-2.jpeg"
+# food_names = get_food_name_from_google(image_path)
+
+# print("Possible Food Names:", food_names)
