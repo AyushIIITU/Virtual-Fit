@@ -1,0 +1,158 @@
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { View, Text, Button, SafeAreaView, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import * as Camera from 'expo-camera';
+
+const WS_URL = "ws://192.168.152.89:8000/ws/reps"; // Replace with your local IP
+
+const LiveExercise = () => {
+  const cameraRef = useRef(null);
+  const ws = useRef(null);
+  const [hasPermission, setHasPermission] = useState(null);
+  const [reps, setReps] = useState(0);
+  const [elbowsTucked, setElbowsTucked] = useState(true);
+  const [connected, setConnected] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [cameraType, setCameraType] = useState(null);
+  const [cameraError, setCameraError] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // Check if Camera module is available
+        if (!Camera.CameraType) {
+          throw new Error('Camera module not available');
+        }
+
+        const { status } = await Camera.requestCameraPermissionsAsync();
+        setHasPermission(status === 'granted');
+        setCameraType(Camera.CameraType.front);
+      } catch (error) {
+        console.error('Camera initialization error:', error);
+        setCameraError(error.message);
+      }
+    })();
+  }, []);
+
+  const startStream = () => {
+    ws.current = new WebSocket(WS_URL);
+
+    ws.current.onopen = () => {
+      setConnected(true);
+      console.log("WebSocket connected");
+      captureAndSend();
+    };
+
+    ws.current.onmessage = (e) => {
+      try {
+        const result = JSON.parse(e.data);
+        setReps(result.count);
+        setElbowsTucked(result.elbows_tucked);
+      } catch (err) {
+        console.error("Error parsing message:", err);
+      }
+    };
+
+    ws.current.onclose = () => {
+      console.log("WebSocket disconnected");
+      setConnected(false);
+    };
+
+    ws.current.onerror = (e) => {
+      console.error("WebSocket error:", e.message);
+    };
+  };
+
+  const stopStream = () => {
+    if (ws.current) {
+      ws.current.close();
+    }
+  };
+
+  const captureAndSend = useCallback(async () => {
+    if (!cameraRef.current || !ws.current || ws.current.readyState !== WebSocket.OPEN) return;
+
+    setProcessing(true);
+
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.5,
+        base64: true,
+        skipProcessing: true,
+      });
+
+      const base64 = photo.base64;
+
+      if (base64) {
+        ws.current.send(JSON.stringify({ image: base64 }));
+      }
+    } catch (error) {
+      console.error("Error capturing photo:", error);
+    }
+
+    setProcessing(false);
+
+    setTimeout(captureAndSend, 1000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopStream();
+    };
+  }, []);
+
+  if (Platform.OS === 'web') {
+    return <Text>Camera functionality is not available on web</Text>;
+  }
+
+  if (cameraError) {
+    return <Text>Error: {cameraError}</Text>;
+  }
+
+  if (hasPermission === null) return <ActivityIndicator />;
+  if (hasPermission === false) return <Text>No camera access</Text>;
+  if (!cameraType) return <ActivityIndicator />;
+
+  return (
+    <SafeAreaView className="flex-1 bg-[#eef4f8] px-5 py-6">
+      <View className="flex-1 items-center justify-center">
+        <Text className="text-2xl font-bold text-center mb-6">Live Exercise</Text>
+
+        <Camera
+          style={styles.camera}
+          ref={cameraRef}
+          type={cameraType}
+          ratio="4:3"
+        />
+        
+        <Text className="text-xl mb-2">Reps: {reps}</Text>
+        <Text className="text-xl">
+          Elbows Tucked: {elbowsTucked ? '✅' : '❌'}
+        </Text>
+      </View>
+
+      {processing && (
+        <Text className="text-center mb-2 text-gray-500">Processing frame...</Text>
+      )}
+
+      <View className="w-full">
+        <Button
+          title={connected ? "Stop" : "Start"}
+          onPress={connected ? stopStream : startStream}
+          color={connected ? "red" : "green"}
+        />
+      </View>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  camera: {
+    width: '100%',
+    height: 300,
+    borderRadius: 16,
+    marginBottom: 20,
+    overflow: 'hidden'
+  }
+});
+
+export default LiveExercise;
