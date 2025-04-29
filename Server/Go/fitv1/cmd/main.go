@@ -15,6 +15,7 @@ import (
 	"github.com/AyushIIITU/virtualfit/internal/middleware"
 	"github.com/AyushIIITU/virtualfit/internal/repository"
 	"github.com/AyushIIITU/virtualfit/internal/service"
+
 	// "github.com/ayushIIITU/fitv1/internal/handlers"
 	// "github.com/ayushIIITU/fitv1/internal/middleware"
 	// "github.com/ayushIIITU/fitv1/internal/repository"
@@ -56,19 +57,18 @@ func main() {
 	protected := router.Group("/api/v1")
 	protected.Use(middleware.AuthMiddleware(cfg))
 	{
+		// User routes
+		protected.PUT("/profile", handler.UpdateProfile)
+
 		// Exercise routes
 		protected.POST("/exercises", handler.CreateExercise)
 		protected.GET("/exercises/:id", handler.GetExercise)
 		protected.GET("/exercises", handler.ListExercises)
 
-		// Workout routes
-		protected.POST("/workouts", handler.CreateWorkout)
-		protected.GET("/workouts/:id", handler.GetWorkout)
-		protected.GET("/workouts", handler.ListUserWorkouts)
-
-		// Progress routes
-		protected.POST("/progress", handler.RecordProgress)
-		protected.GET("/progress", handler.GetUserProgress)
+		// Food Intake routes
+		protected.POST("/food-intake", handler.CreateFoodIntake)
+		protected.GET("/food-intake/:id", handler.GetFoodIntake)
+		protected.GET("/food-intake", handler.ListUserFoodIntake)
 	}
 
 	// Create server

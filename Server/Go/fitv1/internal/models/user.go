@@ -3,41 +3,61 @@ package models
 import (
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type User struct {
-	ID             bson.ObjectID `bson:"_id,omitempty" json:"id"`
-	Email          string            `bson:"email" json:"email"`
-	Password       string            `bson:"password" json:"-"`
-	FirstName      string            `bson:"first_name" json:"first_name"`
-	LastName       string            `bson:"last_name" json:"last_name"`
-	DateOfBirth    time.Time         `bson:"date_of_birth" json:"date_of_birth"`
-	Gender         string            `bson:"gender" json:"gender"`
-	Height         float64           `bson:"height" json:"height"` // in cm
-	Weight         float64           `bson:"weight" json:"weight"` // in kg
-	FitnessGoal    string            `bson:"fitness_goal" json:"fitness_goal"`
-	ActivityLevel  string            `bson:"activity_level" json:"activity_level"`
-	CreatedAt      time.Time         `bson:"created_at" json:"created_at"`
-	UpdatedAt      time.Time         `bson:"updated_at" json:"updated_at"`
-	ProfilePicture string            `bson:"profile_picture" json:"profile_picture"`
+	ID                     bson.ObjectID   `bson:"_id,omitempty" json:"id"`
+	Name                   string          `bson:"name" json:"name" validate:"required"`
+	Email                  string          `bson:"email" json:"email" validate:"required,email"`
+	PasswordHash           string          `bson:"password_hash" json:"password_hash,omitempty" validate:"required"`
+	DOB                    time.Time       `bson:"dob" json:"dob" validate:"required"`
+	Gender                 string          `bson:"gender" json:"gender" validate:"required,oneof=Male Female Other"`
+	Height                 float64         `bson:"height" json:"height" validate:"required,gt=0"`
+	Weight                 float64         `bson:"weight" json:"weight" validate:"required,gt=0"`
+	Region                 string          `bson:"region" json:"region" validate:"required"`
+	Goals                  []string        `bson:"goals" json:"goals" validate:"required,min=1,dive,required"`
+	DietaryRestrictions    []string        `bson:"dietary_restrictions" json:"dietary_restrictions"`
+	DailyCalorieIntake     int             `bson:"daily_calorie_intake" json:"daily_calorie_intake" validate:"required,min=1000,max=5000"`
+	DailyProteinIntake     int             `bson:"daily_protein_intake" json:"daily_protein_intake" validate:"required,min=30,max=500"`
+	FoodsToAvoid           []string        `bson:"foods_to_avoid" json:"foods_to_avoid"`
+	Exercises              []bson.ObjectID `bson:"exercises" json:"exercises"`
+	PreferredMealFrequency int             `bson:"preferred_meal_frequency" json:"preferred_meal_frequency" validate:"required,min=1,max=6"`
+	CurrentFitnessLevel    string          `bson:"current_fitness_level" json:"current_fitness_level" validate:"required,oneof=Beginner Intermediate Advanced"`
+	HealthConsiderations   []string        `bson:"health_considerations" json:"health_considerations"`
+	InterestedActivities   []string        `bson:"interested_activities" json:"interested_activities"`
+	DaysPerWeek            int             `bson:"days_per_week" json:"days_per_week" validate:"required,min=1,max=7"`
+	MedicalConditions      []string        `bson:"medical_conditions" json:"medical_conditions"`
+	FoodAllergies          []string        `bson:"food_allergies" json:"food_allergies"`
+	FoodAlbum              []bson.ObjectID `bson:"food_album" json:"food_album"`
+	CreatedAt              time.Time       `bson:"created_at" json:"created_at"`
+	UpdatedAt              time.Time       `bson:"updated_at" json:"updated_at"`
+}
+type UserRegister struct {
+	Name                 string   `json:"name" validate:"required"`
+	Email                string   `json:"email" validate:"required,email"`
+	Password             string   `json:"password" validate:"required,min=8"`
+	DateOfBirth          string   `json:"dob" validate:"required"`
+	Gender               string   `bson:"gender" json:"gender" validate:"required,oneof=Male Female Other"`
+	Height               float64  `bson:"height" json:"height" validate:"required,gt=0"`
+	Weight               float64  `bson:"weight" json:"weight" validate:"required,gt=0"`
+	Region               string   `bson:"region" json:"region" validate:"required"`
+	Goals                []string `bson:"goals" json:"goals" validate:"required,min=1,dive,required"`
+	DietaryRestrictions  []string `bson:"dietary_restrictions" json:"dietary_restrictions"`
+	FoodsToAvoid         []string `bson:"foods_to_avoid" json:"foods_to_avoid"`
+	MedicalConditions    []string `bson:"medical_conditions" json:"medical_conditions"`
+	FoodAllergies        []string `bson:"food_allergies" json:"food_allergies"`
+	CurrentFitnessLevel  string   `bson:"current_fitness_level" json:"current_fitness_level" validate:"required,oneof=Beginner Intermediate Advanced"`
+	HealthConsiderations []string `bson:"health_considerations" json:"health_considerations"`
 }
 
 type UserLogin struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=8"`
 }
 
-type UserRegister struct {
-	Email          string  `json:"email" binding:"required,email"`
-	Password       string  `json:"password" binding:"required,min=6"`
-	FirstName      string  `json:"first_name" binding:"required"`
-	LastName       string  `json:"last_name" binding:"required"`
-	DateOfBirth    string  `json:"date_of_birth" binding:"required"`
-	Gender         string  `json:"gender" binding:"required"`
-	Height         float64 `json:"height" binding:"required"`
-	Weight         float64 `json:"weight" binding:"required"`
-	FitnessGoal    string  `json:"fitness_goal" binding:"required"`
-	ActivityLevel  string  `json:"activity_level" binding:"required"`
-	ProfilePicture string  `json:"profile_picture"`
-} 
+func (u *User) Validate() error {
+	validate := validator.New()
+	return validate.Struct(u)
+}

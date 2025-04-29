@@ -7,8 +7,10 @@ import (
 
 	"github.com/AyushIIITU/virtualfit/internal/models"
 	"github.com/AyushIIITU/virtualfit/internal/repository"
-
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	// "go.mongodb.org/mongo-driver/bson"
+	// "go.mongodb.org/mongo-driver/bson/bson"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -34,24 +36,30 @@ func (s *Service) RegisterUser(ctx context.Context, userReg *models.UserRegister
 		return nil, err
 	}
 
-	// Parse date of birth (assuming UserRegister has a DateOfBirth field)
+	// Parse date of birth
 	dob, err := time.Parse("2006-01-02", userReg.DateOfBirth)
 	if err != nil {
 		return nil, err
 	}
 
 	user := &models.User{
-		Email:          userReg.Email,
-		Password:       string(hashedPassword),
-		FirstName:      userReg.FirstName,
-		LastName:       userReg.LastName,
-		DateOfBirth:    dob,
-		Gender:         userReg.Gender,
-		Height:         userReg.Height,
-		Weight:         userReg.Weight,
-		FitnessGoal:    userReg.FitnessGoal,
-		ActivityLevel:  userReg.ActivityLevel,
-		ProfilePicture: userReg.ProfilePicture,
+		Name:                 userReg.Name,
+		Email:                userReg.Email,
+		PasswordHash:         string(hashedPassword),
+		DOB:                  dob,
+		Gender:               userReg.Gender,
+		Height:               userReg.Height,
+		Weight:               userReg.Weight,
+		Region:               userReg.Region,
+		Goals:                userReg.Goals,
+		DietaryRestrictions:  userReg.DietaryRestrictions,
+		FoodsToAvoid:         userReg.FoodsToAvoid,
+		CurrentFitnessLevel:  userReg.CurrentFitnessLevel,
+		HealthConsiderations: userReg.HealthConsiderations,
+		MedicalConditions:    userReg.MedicalConditions,
+		FoodAllergies:        userReg.FoodAllergies,
+		CreatedAt:            time.Now(),
+		UpdatedAt:            time.Now(),
 	}
 
 	return s.repo.CreateUser(ctx, user)
@@ -63,7 +71,7 @@ func (s *Service) LoginUser(ctx context.Context, login *models.UserLogin) (*mode
 		return nil, errors.New("invalid credentials")
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(login.Password))
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(login.Password))
 	if err != nil {
 		return nil, errors.New("invalid credentials")
 	}
@@ -74,7 +82,6 @@ func (s *Service) LoginUser(ctx context.Context, login *models.UserLogin) (*mode
 // Exercise Service
 func (s *Service) CreateExercise(ctx context.Context, exercise *models.Exercise) (*models.Exercise, error) {
 	exercise.CreatedAt = time.Now()
-	exercise.UpdatedAt = time.Now()
 	return s.repo.CreateExercise(ctx, exercise)
 }
 
@@ -82,59 +89,25 @@ func (s *Service) GetExercise(ctx context.Context, id bson.ObjectID) (*models.Ex
 	return s.repo.GetExerciseByID(ctx, id)
 }
 
-func (s *Service) ListExercises(ctx context.Context, muscleGroup string, difficulty string) ([]*models.Exercise, error) {
-	filter := bson.M{}
-	if muscleGroup != "" {
-		filter["muscle_group"] = muscleGroup
-	}
-	if difficulty != "" {
-		filter["difficulty"] = difficulty
-	}
-
-	// opts := options.Find().SetSort(bson.D{{Key: "name", Value: 1}})
-	return s.repo.ListExercises(ctx, filter)
+func (s *Service) ListExercises(ctx context.Context) ([]*models.Exercise, error) {
+	return s.repo.ListExercises(ctx, bson.M{})
 }
 
-// Workout Service
-func (s *Service) CreateWorkout(ctx context.Context, workout *models.Workout) (*models.Workout, error) {
-	// Validate exercises exist
-	for _, exercise := range workout.Exercises {
-		_, err := s.repo.GetExerciseByID(ctx, exercise.ExerciseID)
-		if err != nil {
-			return nil, errors.New("invalid exercise ID: " + exercise.ExerciseID.Hex())
-		}
-	}
-
-	workout.CreatedAt = time.Now()
-	workout.UpdatedAt = time.Now()
-	return s.repo.CreateWorkout(ctx, workout)
+// Food Intake Service
+func (s *Service) CreateFoodIntake(ctx context.Context, foodIntake *models.FoodIntake) (*models.FoodIntake, error) {
+	foodIntake.CreatedAt = time.Now()
+	return s.repo.CreateFoodIntake(ctx, foodIntake)
 }
 
-func (s *Service) GetWorkout(ctx context.Context, id bson.ObjectID) (*models.Workout, error) {
-	return s.repo.GetWorkoutByID(ctx, id)
+func (s *Service) GetFoodIntake(ctx context.Context, id bson.ObjectID) (*models.FoodIntake, error) {
+	return s.repo.GetFoodIntakeByID(ctx, id)
 }
 
-func (s *Service) ListUserWorkouts(ctx context.Context, userID bson.ObjectID) ([]*models.Workout, error) {
-	filter := userID
-	// opts := options.Find().SetSort(bson.D{{Key: "date", Value: -1}})
-	return s.repo.ListUserWorkouts(ctx, filter)
+func (s *Service) ListUserFoodIntake(ctx context.Context, userID bson.ObjectID) ([]*models.FoodIntake, error) {
+	return s.repo.ListUserFoodIntake(ctx, userID)
 }
 
-// Workout Progress Service
-func (s *Service) RecordWorkoutProgress(ctx context.Context, progress *models.WorkoutProgress) (*models.WorkoutProgress, error) {
-	// Validate workout exists
-	_, err := s.repo.GetWorkoutByID(ctx, progress.WorkoutID)
-	if err != nil {
-		return nil, errors.New("invalid workout ID")
-	}
-
-	progress.CreatedAt = time.Now()
-	progress.UpdatedAt = time.Now()
-	return s.repo.CreateWorkoutProgress(ctx, progress)
-}
-
-func (s *Service) GetUserProgress(ctx context.Context, userID bson.ObjectID, startDate, endDate time.Time) ([]*models.WorkoutProgress, error) {
-	filter := userID
-	// opts := options.Find().SetSort(bson.D{{Key: "date", Value: -1}})
-	return s.repo.GetUserProgress(ctx, filter)
+// User Profile Update Service
+func (s *Service) UpdateUserProfile(ctx context.Context, user *models.User) error {
+	return s.repo.UpdateUser(ctx, user)
 }

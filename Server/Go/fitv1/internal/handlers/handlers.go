@@ -2,16 +2,11 @@ package handlers
 
 import (
 	"net/http"
-	"time"
 
-	// "github.com/ayushIIITU/fitv1/internal/models"
 	"github.com/AyushIIITU/virtualfit/internal/models"
 	"github.com/AyushIIITU/virtualfit/internal/service"
-	"go.mongodb.org/mongo-driver/v2/bson"
-
-	// "github.com/ayushIIITU/virtualfit/internal/service"
 	"github.com/gin-gonic/gin"
-	// "go.mongodb.org/mongo-driver/bson/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Handler struct {
@@ -56,6 +51,30 @@ func (h *Handler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+func (h *Handler) UpdateProfile(c *gin.Context) {
+	var user models.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get user ID from context (set by auth middleware)
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	user.ID = userID.(bson.ObjectID)
+
+	err := h.service.UpdateUserProfile(c.Request.Context(), &user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "profile updated successfully"})
+}
+
 // Exercise Handlers
 func (h *Handler) CreateExercise(c *gin.Context) {
 	var exercise models.Exercise
@@ -90,10 +109,7 @@ func (h *Handler) GetExercise(c *gin.Context) {
 }
 
 func (h *Handler) ListExercises(c *gin.Context) {
-	muscleGroup := c.Query("muscle_group")
-	difficulty := c.Query("difficulty")
-
-	exercises, err := h.service.ListExercises(c.Request.Context(), muscleGroup, difficulty)
+	exercises, err := h.service.ListExercises(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -102,114 +118,58 @@ func (h *Handler) ListExercises(c *gin.Context) {
 	c.JSON(http.StatusOK, exercises)
 }
 
-// Workout Handlers
-func (h *Handler) CreateWorkout(c *gin.Context) {
-	var workout models.Workout
-	if err := c.ShouldBindJSON(&workout); err != nil {
+// Food Intake Handlers
+func (h *Handler) CreateFoodIntake(c *gin.Context) {
+	var foodIntake models.FoodIntake
+	if err := c.ShouldBindJSON(&foodIntake); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Get user ID from context (set by auth middleware)
-	userID, exists := c.Get("userID")
+	_, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	workout.UserID = userID.(bson.ObjectID)
 
-	createdWorkout, err := h.service.CreateWorkout(c.Request.Context(), &workout)
+	createdFoodIntake, err := h.service.CreateFoodIntake(c.Request.Context(), &foodIntake)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, createdWorkout)
+	c.JSON(http.StatusCreated, createdFoodIntake)
 }
 
-func (h *Handler) GetWorkout(c *gin.Context) {
+func (h *Handler) GetFoodIntake(c *gin.Context) {
 	id, err := bson.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid workout ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid food intake ID"})
 		return
 	}
 
-	workout, err := h.service.GetWorkout(c.Request.Context(), id)
+	foodIntake, err := h.service.GetFoodIntake(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "workout not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "food intake not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, workout)
+	c.JSON(http.StatusOK, foodIntake)
 }
 
-func (h *Handler) ListUserWorkouts(c *gin.Context) {
+func (h *Handler) ListUserFoodIntake(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	workouts, err := h.service.ListUserWorkouts(c.Request.Context(), userID.(bson.ObjectID))
+	foodIntakes, err := h.service.ListUserFoodIntake(c.Request.Context(), userID.(bson.ObjectID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, workouts)
+	c.JSON(http.StatusOK, foodIntakes)
 }
-
-// Workout Progress Handlers
-func (h *Handler) RecordProgress(c *gin.Context) {
-	var progress models.WorkoutProgress
-	if err := c.ShouldBindJSON(&progress); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
-	progress.UserID = userID.(bson.ObjectID)
-
-	recordedProgress, err := h.service.RecordWorkoutProgress(c.Request.Context(), &progress)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusCreated, recordedProgress)
-}
-
-func (h *Handler) GetUserProgress(c *gin.Context) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
-
-	startDateStr := c.Query("start_date")
-	endDateStr := c.Query("end_date")
-
-	startDate, err := time.Parse("2006-01-02", startDateStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start date format"})
-		return
-	}
-
-	endDate, err := time.Parse("2006-01-02", endDateStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end date format"})
-		return
-	}
-
-	progress, err := h.service.GetUserProgress(c.Request.Context(), userID.(bson.ObjectID), startDate, endDate)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, progress)
-} 
