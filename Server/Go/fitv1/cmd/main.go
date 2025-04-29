@@ -16,10 +16,6 @@ import (
 	"github.com/AyushIIITU/virtualfit/internal/repository"
 	"github.com/AyushIIITU/virtualfit/internal/service"
 
-	// "github.com/ayushIIITU/fitv1/internal/handlers"
-	// "github.com/ayushIIITU/fitv1/internal/middleware"
-	// "github.com/ayushIIITU/fitv1/internal/repository"
-	// "github.com/ayushIIITU/fitv1/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -51,6 +47,10 @@ func main() {
 	{
 		public.POST("/register", handler.Register)
 		public.POST("/login", handler.Login)
+		// Workout routes
+		public.GET("/workout", handler.ListWorkoutAPI)
+		public.GET("/workout/search", handler.SearchWorkoutAPI)
+		public.GET("/workout/:id/:imageName", handler.GetWorkoutImage)
 	}
 
 	// Protected routes
@@ -69,6 +69,7 @@ func main() {
 		protected.POST("/food-intake", handler.CreateFoodIntake)
 		protected.GET("/food-intake/:id", handler.GetFoodIntake)
 		protected.GET("/food-intake", handler.ListUserFoodIntake)
+
 	}
 
 	// Create server
@@ -100,4 +101,4 @@ func main() {
 	}
 
 	log.Println("Server exiting")
-} 
+}

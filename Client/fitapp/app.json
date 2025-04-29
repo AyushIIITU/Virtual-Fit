@@ -4,7 +4,7 @@
     "slug": "fitapp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/fitlogo.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -12,8 +12,9 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.virtualfit.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/fitlogo.png",
         "backgroundColor": "#ffffff"
       }
     },
@@ -33,22 +34,28 @@
           "backgroundColor": "#ffffff"
         }
       ]
-
-      
     ],
     "experiments": {
       "typedRoutes": true
     },
     "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
+      "development": {
+        "developmentClient": true,
+        "distribution": "internal"
+      },
+      "preview": {
+        "android": {
+          "buildType": "apk"
+        }
+      }
     },
-    "preview": {
-      "android": {
-        "buildType": "apk"
-      }  
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "73e8d18f-6012-47cd-b160-85313f98470c"
+      }
     }
-  }
   }
 }

@@ -38,3 +38,7 @@ Thumbs.dbx
 /build/
 /bin/
 /dist/
+.air.toml 
+vendor/
+tmp/
+uploads/

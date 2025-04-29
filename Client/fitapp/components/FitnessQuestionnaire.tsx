@@ -1,15 +1,10 @@
-import React, { useState } from "react";
-import { ScrollView, Text, TextInput, View, Switch, TouchableOpacity } from "react-native";
-import { Picker } from "@react-native-picker/picker";
-import { styled } from "nativewind";
+import React, { useState } from 'react';
+import { ScrollView, Text, TextInput, View, Switch, TouchableOpacity, StyleSheet } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const StyledText = styled(Text);
-const StyledTextInput = styled(TextInput);
-const StyledView = styled(View);
-const StyledSwitch = styled(Switch);
-const StyledTouchable = styled(TouchableOpacity);
-
+// Interfaces
 interface FoodHabits {
   caffeine: boolean;
   alcohol: boolean;
@@ -24,7 +19,7 @@ interface FitnessForm {
   gender: string;
   height: string;
   weight: string;
-  units: "metric" | "imperial";
+  units: 'metric' | 'imperial';
   fitnessGoals: string[];
   targetWeight: string;
   fitnessLevel: string;
@@ -48,20 +43,20 @@ interface FitnessForm {
 
 const FitnessQuestionnaire = () => {
   const [form, setForm] = useState<FitnessForm>({
-    name: "",
-    age: "",
-    gender: "",
-    height: "",
-    weight: "",
-    units: "metric",
+    name: '',
+    age: '',
+    gender: '',
+    height: '',
+    weight: '',
+    units: 'metric',
     fitnessGoals: [],
-    targetWeight: "",
-    fitnessLevel: "",
-    exerciseFreq: "",
+    targetWeight: '',
+    fitnessLevel: '',
+    exerciseFreq: '',
     pastWorkouts: [],
-    dietType: "",
-    allergies: "",
-    dislikes: "",
+    dietType: '',
+    allergies: '',
+    dislikes: '',
     foodHabits: {
       caffeine: false,
       alcohol: false,
@@ -69,14 +64,14 @@ const FitnessQuestionnaire = () => {
       gluten: false,
       sugar: false,
     },
-    mealsPerDay: "",
-    favoriteFoods: "",
-    workoutTime: "",
-    workoutDuration: "",
-    routine: "",
-    medicalConditions: "",
-    medications: "",
-    injuries: "",
+    mealsPerDay: '',
+    favoriteFoods: '',
+    workoutTime: '',
+    workoutDuration: '',
+    routine: '',
+    medicalConditions: '',
+    medications: '',
+    injuries: '',
     equipment: [],
     reminders: false,
   });
@@ -100,29 +95,30 @@ const FitnessQuestionnaire = () => {
   };
 
   const Input = ({ label, field, multiline = false }: { label: string; field: keyof FitnessForm; multiline?: boolean }) => (
-    <StyledView className="mb-4">
-      <StyledText className="font-bold text-base text-gray-800">{label}</StyledText>
-      <StyledTextInput
-        className="border border-gray-300 rounded-lg mt-2 p-2 text-gray-900"
+    <View style={styles.inputContainer}>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        style={styles.textInput}
         multiline={multiline}
         value={form[field] as string}
         onChangeText={(text) => setForm({ ...form, [field]: text })}
       />
-    </StyledView>
+    </View>
   );
 
   const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <StyledView className="mb-8">
-      <StyledText className="text-xl font-bold text-blue-700 mb-3">{title}</StyledText>
+    <View style={styles.sectionContainer}>
+      <Text style={styles.sectionTitle}>{title}</Text>
       {children}
-    </StyledView>
+    </View>
   );
 
   const handleSubmit = async () => {
     try {
+      const token = await AsyncStorage.getItem('token');
       const response = await axios.post('http://localhost:3000/api/fitness-profile', form, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -135,18 +131,18 @@ const FitnessQuestionnaire = () => {
   };
 
   return (
-    <ScrollView className="p-5 bg-white">
+    <ScrollView style={styles.scrollView}>
       <Section title="👤 Basic Info">
         <Input label="Name" field="name" />
         <Input label="Age" field="age" />
         <Input label="Gender" field="gender" />
         <Input label="Height (cm or ft)" field="height" />
         <Input label="Weight (kg or lbs)" field="weight" />
-        <StyledText className="font-bold text-gray-800">Units</StyledText>
+        <Text style={styles.label}>Units</Text>
         <Picker
           selectedValue={form.units}
-          onValueChange={(value) => setForm({ ...form, units: value as "metric" | "imperial" })}
-          style={{ marginTop: 8 }}
+          onValueChange={(value) => setForm({ ...form, units: value as 'metric' | 'imperial' })}
+          style={styles.picker}
         >
           <Picker.Item label="Metric (kg, cm)" value="metric" />
           <Picker.Item label="Imperial (lbs, ft)" value="imperial" />
@@ -154,10 +150,10 @@ const FitnessQuestionnaire = () => {
       </Section>
 
       <Section title="🎯 Fitness Goals">
-        {["Lose weight", "Gain muscle", "Improve endurance"].map((goal) => (
-          <StyledTouchable key={goal} onPress={() => toggleItem("fitnessGoals", goal)}>
-            <StyledText className="text-gray-700 mb-2">🔘 {goal}</StyledText>
-          </StyledTouchable>
+        {['Lose weight', 'Gain muscle', 'Improve endurance'].map((goal) => (
+          <TouchableOpacity key={goal} onPress={() => toggleItem('fitnessGoals', goal)}>
+            <Text style={styles.optionText}>🔘 {goal}</Text>
+          </TouchableOpacity>
         ))}
         <Input label="Target Weight (optional)" field="targetWeight" />
       </Section>
@@ -173,13 +169,13 @@ const FitnessQuestionnaire = () => {
         <Input label="Food Allergies" field="allergies" />
         <Input label="Foods to Avoid" field="dislikes" />
         {Object.keys(form.foodHabits).map((key) => (
-          <StyledView key={key} className="flex-row items-center my-1">
-            <StyledSwitch
+          <View key={key} style={styles.switchContainer}>
+            <Switch
               value={form.foodHabits[key as keyof FoodHabits]}
               onValueChange={() => toggleFood(key as keyof FoodHabits)}
             />
-            <StyledText className="ml-2 capitalize text-gray-700">{key}</StyledText>
-          </StyledView>
+            <Text style={styles.switchLabel}>{key.charAt(0).toUpperCase() + key.slice(1)}</Text>
+          </View>
         ))}
         <Input label="Meals per Day" field="mealsPerDay" />
         <Input label="Favorite Foods" field="favoriteFoods" />
@@ -199,23 +195,88 @@ const FitnessQuestionnaire = () => {
 
       <Section title="🏋️ Equipment & Motivation">
         <Input label="Available Equipment" field="equipment" />
-        <StyledView className="flex-row items-center mt-2">
-          <StyledSwitch
+        <View style={styles.switchContainer}>
+          <Switch
             value={form.reminders}
             onValueChange={(val) => setForm({ ...form, reminders: val })}
           />
-          <StyledText className="ml-2 text-gray-700">Enable motivational reminders</StyledText>
-        </StyledView>
+          <Text style={styles.switchLabel}>Enable motivational reminders</Text>
+        </View>
       </Section>
 
-      <StyledTouchable
+      <TouchableOpacity
         onPress={handleSubmit}
-        className="bg-blue-600 py-3 px-4 rounded-xl mt-4 items-center"
+        style={styles.submitButton}
       >
-        <StyledText className="text-white font-bold text-lg">Submit</StyledText>
-      </StyledTouchable>
+        <Text style={styles.submitButtonText}>Submit</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
 
-export default FitnessQuestionnaire; 
+const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 20,
+  },
+  sectionContainer: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1E40AF', // blue-700
+    marginBottom: 12,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937', // gray-800
+    marginBottom: 8,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB', // gray-300
+    borderRadius: 8,
+    padding: 8,
+    fontSize: 16,
+    color: '#111827', // gray-900
+  },
+  picker: {
+    marginTop: 8,
+  },
+  optionText: {
+    fontSize: 16,
+    color: '#4B5563', // gray-700
+    marginBottom: 8,
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  switchLabel: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#4B5563', // gray-700
+  },
+  submitButton: {
+    backgroundColor: '#2563EB', // blue-600
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+});
+
+export default FitnessQuestionnaire;

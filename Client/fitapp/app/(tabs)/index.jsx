@@ -3,30 +3,32 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  Image,FlatList
+  Image,
+  FlatList,
+  ActivityIndicator
 } from 'react-native';
-// import React, { useEffect, useState } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import SearchBar from "@/app/Components/SearchBar";
 import ExerciseDetails from "@/app/Components/ExerciseDetails";
-import exercisesData from "@/assets/exercises.json";
+import { Card, Chip } from 'react-native-paper';
+import { API } from '@/Utils/api';
 
 export default function HomeScreen() {
   const router = useRouter();
   const [userName, setUserName] = useState('');
   const [query, setQuery] = useState("");
   const [selectedExercise, setSelectedExercise] = useState(null);
-  const [filteredExercises, setFilteredExercises] = useState([]);
-
-  useEffect(() => {
-    const results = exercisesData.filter((exercise) =>
-      exercise.name.toLowerCase().includes(query.toLowerCase())
-    );
-    setFilteredExercises(results);
-  }, [query]);
+  const [exercises, setExercises] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    limit: 10,
+    offset: 0,
+    hasMore: false,
+  });
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -43,6 +45,63 @@ export default function HomeScreen() {
     fetchUserData();
   }, []);
 
+  const fetchExercises = async (offset = 0, name = '') => {
+    try {
+      setLoading(true);
+      let url = `${API}/v1/workout?limit=${pagination.limit}&offset=${offset}`;
+      if (name) {
+        url = `${API}/v1/workout/search?name=${name}`;
+      }
+      const response = await fetch(url);
+      const { data, pagination: apiPagination } = await response.json();
+  
+      if (offset === 0) {
+        setExercises(data);
+      } else {
+        setExercises([...exercises, ...data]);
+      }
+  
+      setPagination({
+        ...pagination,
+        offset,
+        total: apiPagination.total,
+        hasMore: apiPagination.hasMore,
+      });
+    } catch (error) {
+      console.error('Error fetching exercises:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExercises();
+  }, []);
+
+  useEffect(() => {
+    if (query) {
+      const debounceTimer = setTimeout(() => {
+        setPagination(prev => ({ ...prev, offset: 0 }));
+        fetchExercises(0, query);
+      }, 500);
+      return () => clearTimeout(debounceTimer);
+    } else {
+      fetchExercises(0, '');
+    }
+  }, [query]);
+
+  const handleLoadMore = () => {
+    if (pagination.hasMore && !loading) {
+      fetchExercises(pagination.offset + pagination.limit, query);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchExercises(0, query);
+  };
+
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('userToken');
@@ -53,8 +112,40 @@ export default function HomeScreen() {
     }
   };
 
+  const renderExerciseCard = ({ item }) => (
+    <Card style={styles.card} onPress={() => setSelectedExercise(item)}>
+      <Card.Cover 
+        source={{ 
+          uri: item.images && item.images.length > 0 
+            ? `${API}/v1/workout/${item.images[0]}` 
+            : 'https://via.placeholder.com/300x200?text=No+Image'
+        }}
+        style={styles.cardImage} 
+      />
+      <Card.Content>
+        <Text style={styles.title}>{item.name || 'Unnamed Exercise'}</Text>
+        <View style={styles.detailsContainer}>
+          <Text style={styles.detail}>Level: {item.level || 'Not specified'}</Text>
+          <Text style={styles.detail}>Equipment: {item.equipment || 'None'}</Text>
+        </View>
+        <View style={styles.musclesContainer}>
+          <Text style={styles.muscleLabel}>Primary Muscles:</Text>
+          <Text style={styles.muscleText}>
+            {item.primaryMuscles && item.primaryMuscles.length > 0 
+              ? item.primaryMuscles.join(', ') 
+              : 'Not specified'}
+          </Text>
+        </View>
+        <View style={styles.chipContainer}>
+          <Chip style={styles.categoryChip}>{item.category || 'Unknown'}</Chip>
+          {item.force && <Chip style={styles.forceChip}>{item.force}</Chip>}
+        </View>
+      </Card.Content>
+    </Card>
+  );
+
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Hi, {userName || 'Fitness Enthusiast'}!</Text>
@@ -69,44 +160,50 @@ export default function HomeScreen() {
       </View>
 
       {selectedExercise ? (
-        <>
-            <View className="flex-1 bg-gray-100 p-4">
-            <TouchableOpacity
-            className="mt-4 bg-red-500 py-2 px-4 rounded-2xl "
+        <View style={styles.detailContainer}>
+          <TouchableOpacity
+            style={styles.backButton}
             onPress={() => setSelectedExercise(null)}
           >
-            <Text className="text-white text-center">{'<-- Back to list'}</Text>
+            <Text style={styles.backButtonText}>{'<-- Back to list'}</Text>
           </TouchableOpacity>
-            {/* <Text className="text-xl font-bold mb-2">{selectedExercise.name}</Text> */}
           <ExerciseDetails exercise={selectedExercise} />
-          
-            </View>
-        </>
+        </View>
       ) : (
-        <View className="flex-1 bg-gray-100 p-4">
-      <SearchBar query={query} setQuery={setQuery} />
-        <FlatList
-          data={filteredExercises}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() => setSelectedExercise(item)}
-              className="bg-white p-4 mb-2 rounded-2xl shadow"
-            >
-              <Text className="text-lg font-semibold">{item.name}</Text>
-              <Text className="text-sm text-gray-500">
-                {item.primaryMuscles.join(", ")}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
+        <View style={styles.listContainer}>
+          <SearchBar query={query} setQuery={setQuery} />
+          <FlatList
+            data={exercises}
+            keyExtractor={(item) => item.id}
+            renderItem={renderExerciseCard}
+            contentContainerStyle={styles.flatListContent}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            ListFooterComponent={() => (
+              loading ? <ActivityIndicator style={styles.loadingMore} /> : null
+            )}
+            ListEmptyComponent={() => (
+              loading ? (
+                <ActivityIndicator style={styles.loading} />
+              ) : (
+                <Text style={styles.emptyText}>No exercises found</Text>
+              )
+            )}
+          />
         </View>
       )}
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+      <TouchableOpacity
+  style={styles.logoutButton}
+  onPress={handleLogout}
+  accessible={true}
+  accessibilityLabel="Logout"
+>
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -136,25 +233,88 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
   },
-  workoutList: {
-    padding: 20,
+  listContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  workoutCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 15,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+  detailContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    padding: 16,
   },
-  workoutName: {
+  backButton: {
+    backgroundColor: '#ff4444',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  flatListContent: {
+    padding: 16,
+  },
+  card: {
+    marginBottom: 16,
+    elevation: 4,
+  },
+  cardImage: {
+    height: 200,
+  },
+  title: {
     fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 8,
+  },
+  detailsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  detail: {
+    fontSize: 14,
+    color: '#666',
+  },
+  musclesContainer: {
+    marginTop: 8,
+  },
+  muscleLabel: {
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
   },
-  workoutDetails: {
+  muscleText: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
+  },
+  chipContainer: {
+    flexDirection: 'row',
+    marginTop: 8,
+    flexWrap: 'wrap',
+  },
+  categoryChip: {
+    marginRight: 8,
+    marginBottom: 8,
+    backgroundColor: '#e0f7fa',
+  },
+  forceChip: {
+    marginRight: 8,
+    marginBottom: 8,
+    backgroundColor: '#fff9c4',
+  },
+  loading: {
+    marginVertical: 20,
+  },
+  loadingMore: {
+    marginVertical: 16,
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginVertical: 20,
+    fontSize: 16,
+    color: '#666',
   },
   logoutButton: {
     margin: 20,
@@ -168,4 +328,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-}); 
+});

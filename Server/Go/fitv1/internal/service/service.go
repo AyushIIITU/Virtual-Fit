@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"time"
 
 	"github.com/AyushIIITU/virtualfit/internal/models"
@@ -37,29 +38,36 @@ func (s *Service) RegisterUser(ctx context.Context, userReg *models.UserRegister
 	}
 
 	// Parse date of birth
-	dob, err := time.Parse("2006-01-02", userReg.DateOfBirth)
+	// dob, err := time.Parse("2006-01-02", userReg.DateOfBirth)
 	if err != nil {
 		return nil, err
 	}
 
 	user := &models.User{
-		Name:                 userReg.Name,
-		Email:                userReg.Email,
-		PasswordHash:         string(hashedPassword),
-		DOB:                  dob,
-		Gender:               userReg.Gender,
-		Height:               userReg.Height,
-		Weight:               userReg.Weight,
-		Region:               userReg.Region,
-		Goals:                userReg.Goals,
-		DietaryRestrictions:  userReg.DietaryRestrictions,
-		FoodsToAvoid:         userReg.FoodsToAvoid,
-		CurrentFitnessLevel:  userReg.CurrentFitnessLevel,
-		HealthConsiderations: userReg.HealthConsiderations,
-		MedicalConditions:    userReg.MedicalConditions,
-		FoodAllergies:        userReg.FoodAllergies,
-		CreatedAt:            time.Now(),
-		UpdatedAt:            time.Now(),
+		Name:                   userReg.Name,
+		Email:                  userReg.Email,
+		PasswordHash:           string(hashedPassword),
+		DOB:                    userReg.DateOfBirth,
+		Gender:                 userReg.Gender,
+		Height:                 userReg.Height,
+		Weight:                 userReg.Weight,
+		Region:                 userReg.Region,
+		Goals:                  userReg.Goals,
+		DietaryRestrictions:    userReg.DietaryRestrictions,
+		DailyCalorieIntake:     userReg.DailyCalorieIntake,
+		DailyProteinIntake:     userReg.DailyProteinIntake,
+		Exercises:              userReg.Exercises,
+		PreferredMealFrequency: userReg.PreferredMealFrequency,
+		FoodsToAvoid:           userReg.FoodsToAvoid,
+		CurrentFitnessLevel:    userReg.CurrentFitnessLevel,
+		HealthConsiderations:   userReg.HealthConsiderations,
+		MedicalConditions:      userReg.MedicalConditions,
+		FoodAllergies:          userReg.FoodAllergies,
+		InterestedActivities:   userReg.InterestedActivities,
+		DaysPerWeek:            userReg.DaysPerWeek,
+
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	return s.repo.CreateUser(ctx, user)
@@ -110,4 +118,27 @@ func (s *Service) ListUserFoodIntake(ctx context.Context, userID bson.ObjectID) 
 // User Profile Update Service
 func (s *Service) UpdateUserProfile(ctx context.Context, user *models.User) error {
 	return s.repo.UpdateUser(ctx, user)
+}
+
+func (s *Service) GetWorkout(ctx context.Context, nameFilter string) ([]*models.Workout, error) {
+	return s.repo.GetWorkout(ctx, nameFilter)
+}
+
+// GetWorkoutPaginated returns a paginated list of workouts and the total count
+func (s *Service) GetWorkoutPaginated(ctx context.Context, nameFilter string, limit, offset int) ([]*models.Workout, int64, error) {
+	return s.repo.GetWorkoutPaginated(ctx, nameFilter, limit, offset)
+}
+
+// SearchWorkouts searches for workouts based on the provided criteria
+func (s *Service) SearchWorkouts(ctx context.Context, criteria models.WorkoutSearchCriteria) ([]*models.Workout, int64, error) {
+	return s.repo.SearchWorkouts(ctx, criteria)
+}
+
+func (s *Service) GetWorkoutByID(ctx context.Context, id bson.ObjectID) (*models.Workout, error) {
+	return s.repo.GetWorkoutByID(ctx, id)
+}
+
+func (s *Service) GetWorkoutImagePath(workoutId, imageName string) string {
+	baseImagesPath := "../uploads/workout_images"
+	return filepath.Join(baseImagesPath, workoutId, imageName)
 }

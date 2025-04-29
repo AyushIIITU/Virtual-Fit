@@ -4,7 +4,7 @@ import imageMap from "@/data/imageMap";
 
 const ImageCarousel = ({ imagePaths }) => {
   return (
-    <ScrollView horizontal className="my-2">
+    <View horizontal className="my-2">
       {imagePaths.map((img, idx) => {
         const localImage = imageMap[img];
         if (!localImage) return null; // optional fallback
@@ -17,7 +17,7 @@ const ImageCarousel = ({ imagePaths }) => {
           />
         );
       })}
-    </ScrollView>
+    </View>
   );
 };
 
