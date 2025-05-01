@@ -6,10 +6,14 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/AyushIIITU/virtualfit/internal/models"
 	"github.com/AyushIIITU/virtualfit/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
+
+	// "github.com/golang-jwt/jwt"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -51,8 +55,24 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	// TODO: Generate JWT token
-	c.JSON(http.StatusOK, user)
+	// Generate JWT token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": user.ID.Hex(),
+		"exp":     time.Now().Add(time.Hour * 24).Unix(), // Token expires in 24 hours
+	})
+
+	// Sign the token with the secret key
+	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	// Return user data and token
+	c.JSON(http.StatusOK, gin.H{
+		"user":  user,
+		"token": tokenString,
+	})
 }
 
 func (h *Handler) UpdateProfile(c *gin.Context) {
@@ -124,26 +144,56 @@ func (h *Handler) ListExercises(c *gin.Context) {
 
 // Food Intake Handlers
 func (h *Handler) CreateFoodIntake(c *gin.Context) {
-	var foodIntake models.FoodIntake
-	if err := c.ShouldBindJSON(&foodIntake); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Get user ID from context (set by auth middleware)
-	_, exists := c.Get("userID")
+	// Get user ID from context
+	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	createdFoodIntake, err := h.service.CreateFoodIntake(c.Request.Context(), &foodIntake)
+	// Get the uploaded file
+	file, err := c.FormFile("image")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "image is required"})
+		return
+	}
+
+	// Create uploads directory if it doesn't exist
+	uploadDir := "uploads/food_images"
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create upload directory"})
+		return
+	}
+
+	// Generate unique filename
+	filename := fmt.Sprintf("%s_%s", userID.(bson.ObjectID).Hex(), file.Filename)
+	filepath := filepath.Join(uploadDir, filename)
+
+	// Save the file
+	if err := c.SaveUploadedFile(file, filepath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save image"})
+		return
+	}
+
+	// Create food intake record
+	foodIntake := &models.FoodIntake{
+		UserID:    userID.(bson.ObjectID),
+		ImagePath: filepath,
+		Status:    false,
+	}
+
+	// Save to database and start processing
+	createdFoodIntake, err := h.service.CreateFoodIntake(c.Request.Context(), foodIntake)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, createdFoodIntake)
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Food image uploaded and processing started",
+		"food_id": createdFoodIntake.ID,
+		"status":  "processing",
+	})
 }
 
 func (h *Handler) GetFoodIntake(c *gin.Context) {
@@ -176,6 +226,32 @@ func (h *Handler) ListUserFoodIntake(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, foodIntakes)
+}
+
+func (h *Handler) GetFoodIntakeStatus(c *gin.Context) {
+	id, err := bson.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid food intake ID"})
+		return
+	}
+
+	foodIntake, err := h.service.GetFoodIntake(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "food intake not found"})
+		return
+	}
+
+	// If processing is complete, return full details
+	if foodIntake.Status {
+		c.JSON(http.StatusOK, foodIntake)
+		return
+	}
+
+	// If still processing, return minimal info
+	c.JSON(http.StatusOK, gin.H{
+		"id":     foodIntake.ID,
+		"status": "processing",
+	})
 }
 
 func (h *Handler) ListWorkoutAPI(c *gin.Context) {
@@ -343,4 +419,22 @@ func (h *Handler) GetWorkoutImage(c *gin.Context) {
 
 	c.Header("Content-Type", contentType)
 	c.File(imagePath)
+}
+
+// GetDietPlanData returns user data needed for diet planning
+func (h *Handler) GetDietPlanData(c *gin.Context) {
+	// Get user ID from context (set by auth middleware)
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	dietPlanData, err := h.service.GetDietPlanData(c.Request.Context(), userID.(bson.ObjectID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, dietPlanData)
 }

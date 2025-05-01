@@ -108,8 +108,6 @@ func (m *MongoDB) ListExercises(ctx context.Context, filter bson.M) ([]*models.E
 
 // Food Intake Repository
 func (m *MongoDB) CreateFoodIntake(ctx context.Context, foodIntake *models.FoodIntake) (*models.FoodIntake, error) {
-	foodIntake.CreatedAt = time.Now()
-
 	collection := m.db.Collection("food_intakes")
 	result, err := collection.InsertOne(ctx, foodIntake)
 	if err != nil {
@@ -142,6 +140,21 @@ func (m *MongoDB) ListUserFoodIntake(ctx context.Context, userID bson.ObjectID) 
 		return nil, err
 	}
 	return foodIntakes, nil
+}
+
+func (m *MongoDB) UpdateFoodIntake(ctx context.Context, foodIntake *models.FoodIntake) error {
+	_, err := m.db.Collection("food_intakes").UpdateOne(
+		ctx,
+		bson.M{"_id": foodIntake.ID},
+		bson.M{"$set": bson.M{
+			"food_name":    foodIntake.FoodName,
+			"nutrients":    foodIntake.Nutrients,
+			"ingredients":  foodIntake.Ingredients,
+			"status":       foodIntake.Status,
+			"updated_at":   foodIntake.UpdatedAt,
+		}},
+	)
+	return err
 }
 
 func (m *MongoDB) GetWorkout(ctx context.Context, nameFilter string) ([]*models.Workout, error) {

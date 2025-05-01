@@ -1,6 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Slot, Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -18,52 +18,54 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
-  const [isFirstTime, setIsFirstTime] = useState(true);
-  const segments = useSegments();
-  const router = useRouter();
-
-  useEffect(() => {
-    checkFirstTime();
-  }, []);
-
-  useEffect(() => {
-    if (!isFirstTime && segments[0] === '(auth)') {
-      router.replace('/(tabs)');
-    } 
-    else if (isFirstTime && segments[0] !== '(auth)') {
-      router.replace('/(auth)/onboarding');
-    }
-  }, [isFirstTime, segments]);
-
-  const checkFirstTime = async () => {
-    try {
-      const hasCompletedOnboarding = await AsyncStorage.getItem('hasCompletedOnboarding');
-      setIsFirstTime(!hasCompletedOnboarding);
-    } catch (error) {
-      console.error('Error checking first time status:', error);
-    }
-  };
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
+  
+  // Handle the UI loading state
   if (!loaded) {
     return null;
   }
-
+  
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <View style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="+not-found" options={{ headerShown: true }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </View>
+      <RootLayoutNav />
     </ThemeProvider>
+  );
+}
+
+function RootLayoutNav() {
+  const [isReady, setIsReady] = useState(false);
+  const segments = useSegments();
+  const router = useRouter();
+  
+  useEffect(() => {
+    const prepare = async () => {
+      try {
+        // Check if user is authenticated
+        const token = await AsyncStorage.getItem('userToken');
+        if (!token && segments[0] === '(tabs)') {
+          // If not authenticated and trying to access tabs, redirect to auth
+          router.replace('/(tabs)');
+        }
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+      } finally {
+        setIsReady(true);
+        SplashScreen.hideAsync();
+      }
+    };
+    
+    prepare();
+  }, []);
+  
+  // Show a loading indicator until the app is ready
+  if (!isReady) {
+    return <View style={{ flex: 1, backgroundColor: '#fff' }} />;
+  }
+  
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="+not-found" options={{ headerShown: true }} />
+    </Stack>
   );
 }

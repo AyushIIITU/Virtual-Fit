@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   Image,
   FlatList,
-  ActivityIndicator
+  ActivityIndicator,
+  BackHandler
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -43,6 +44,16 @@ export default function HomeScreen() {
     };
 
     fetchUserData();
+  }, []);
+  useEffect(() => {
+    const onBackPress = () => {
+      router.back();
+      return true;
+    };
+
+    BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () =>
+      BackHandler.removeEventListener('hardwareBackPress', onBackPress);
   }, []);
 
   const fetchExercises = async (offset = 0, name = '') => {
@@ -161,12 +172,6 @@ export default function HomeScreen() {
 
       {selectedExercise ? (
         <View style={styles.detailContainer}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => setSelectedExercise(null)}
-          >
-            <Text style={styles.backButtonText}>{'<-- Back to list'}</Text>
-          </TouchableOpacity>
           <ExerciseDetails exercise={selectedExercise} />
         </View>
       ) : (
@@ -194,15 +199,6 @@ export default function HomeScreen() {
           />
         </View>
       )}
-
-      <TouchableOpacity
-  style={styles.logoutButton}
-  onPress={handleLogout}
-  accessible={true}
-  accessibilityLabel="Logout"
->
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
     </View>
   );
 }

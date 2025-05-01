@@ -9,13 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	// "github.com/ayushIIITU/fitv1/config"
 	"github.com/AyushIIITU/virtualfit/config"
 	"github.com/AyushIIITU/virtualfit/internal/handlers"
 	"github.com/AyushIIITU/virtualfit/internal/middleware"
 	"github.com/AyushIIITU/virtualfit/internal/repository"
 	"github.com/AyushIIITU/virtualfit/internal/service"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -59,6 +57,7 @@ func main() {
 	{
 		// User routes
 		protected.PUT("/profile", handler.UpdateProfile)
+		protected.GET("/diet-plan-data", handler.GetDietPlanData)
 
 		// Exercise routes
 		protected.POST("/exercises", handler.CreateExercise)
@@ -67,7 +66,7 @@ func main() {
 
 		// Food Intake routes
 		protected.POST("/food-intake", handler.CreateFoodIntake)
-		protected.GET("/food-intake/:id", handler.GetFoodIntake)
+		protected.GET("/food-intake/:id", handler.GetFoodIntakeStatus)
 		protected.GET("/food-intake", handler.ListUserFoodIntake)
 
 	}

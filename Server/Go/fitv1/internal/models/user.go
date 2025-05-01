@@ -34,6 +34,7 @@ type User struct {
 	CreatedAt              time.Time       `bson:"created_at" json:"created_at"`
 	UpdatedAt              time.Time       `bson:"updated_at" json:"updated_at"`
 }
+
 type UserRegister struct {
 	Name                   string          `bson:"name" json:"name" validate:"required"`
 	Email                  string          `bson:"email" json:"email" validate:"required,email"`
@@ -61,6 +62,28 @@ type UserRegister struct {
 type UserLogin struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=8"`
+}
+
+type DietPlanData struct {
+	ID                     bson.ObjectID `bson:"_id,omitempty" json:"id"`
+	Name                   string        `json:"name"`
+	Email                  string        `json:"email"`
+	Age                    int     `json:"Age"`
+	Gender                 string        `json:"gender"`
+	Height                 float64       `json:"height"`
+	Weight                 float64       `json:"weight"`
+	Goals                  []string      `json:"goals"`
+	DietaryRestrictions    []string      `json:"dietary_restrictions"`
+	DailyCalorieIntake     int           `json:"daily_calorie_intake"`
+	DailyProteinIntake     int           `json:"daily_protein_intake"`
+	FoodsToAvoid           []string      `json:"foods_to_avoid"`
+	CurrentFitnessLevel    string        `json:"current_fitness_level"`
+	HealthConsiderations   []string      `json:"health_considerations"`
+	MedicalConditions      []string      `json:"medical_conditions"`
+	FoodAllergies          []string      `json:"food_allergies"`
+	InterestedActivities   []string      `json:"interested_activities"`
+	DaysPerWeek            int           `json:"days_per_week"`
+	PreferredMealFrequency int           `json:"preferred_meal_frequency"`
 }
 
 func (u *User) Validate() error {

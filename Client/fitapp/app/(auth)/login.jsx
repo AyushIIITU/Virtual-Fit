@@ -1,141 +1,132 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text, TextInput, Button } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import Logo from '../Components/Logo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API } from '@/Utils/api';
 
-export default function LoginScreen() {
+export default function Login() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (email.trim() === '' || password.trim() === '') {
-      Alert.alert('Error', 'Please enter both email and password');
+    if (!email || !password) {
+      setError('Please fill in all fields');
       return;
     }
 
-    setIsLoading(true);
+    setLoading(true);
+    setError('');
 
     try {
-      // Here you would typically make an API call to your backend
-      // For demonstration, we'll just simulate a successful login
-      setTimeout(async () => {
-        await AsyncStorage.setItem('userToken', 'sample-token');
-        await AsyncStorage.setItem('userEmail', email);
-        // Navigate to the home screen
-        router.replace('/(tabs)');
-        setIsLoading(false);
-      }, 1500);
-    } catch (error) {
-      setIsLoading(false);
-      Alert.alert('Error', 'Login failed. Please try again.');
+      const response = await fetch(`${API}/v1/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('Login successful:', data);
+        // Store the token and user data
+        await AsyncStorage.setItem('userToken', data.token);
+        await AsyncStorage.setItem('userData', JSON.stringify(data.user));
+        
+        // Navigate back to the main app
+        router.replace("/");  
+      } else {
+        console.error('Login failed:', data);
+        setError(data.message || 'Login failed');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <View style={styles.logoContainer}>
-        <Logo size={120} />
-      </View>
+    <View style={styles.container}>
+      <Text style={styles.title}>Welcome Back</Text>
+      <Text style={styles.subtitle}>Sign in to continue</Text>
 
-      <View style={styles.formContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+      <TextInput
+        label="Email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        style={styles.input}
+      />
 
-        <TouchableOpacity
-          style={styles.loginButton}
-          onPress={handleLogin}
-          disabled={isLoading}
-        >
-          <Text style={styles.loginButtonText}>
-            {isLoading ? 'Logging in...' : 'Login'}
-          </Text>
-        </TouchableOpacity>
+      <TextInput
+        label="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        style={styles.input}
+      />
 
-        <TouchableOpacity
-          style={styles.signupLink}
-          onPress={() => router.push('/(auth)/signup')}
-        >
-          <Text style={styles.signupText}>
-            Don't have an account? <Text style={styles.signupTextBold}>Sign Up</Text>
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <Button
+        mode="contained"
+        onPress={handleLogin}
+        loading={loading}
+        style={styles.button}
+      >
+        Sign In
+      </Button>
+
+      <TouchableOpacity onPress={() => router.push('/(auth)/onboarding')}>
+        <Text style={styles.link}>Don't have an account? Sign up</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    padding: 20,
+    justifyContent: 'center',
+    backgroundColor: '#fff',
   },
-  logoContainer: {
-    alignItems: 'center',
-    marginTop: 80,
-    marginBottom: 50,
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
   },
-  formContainer: {
-    paddingHorizontal: 30,
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 32,
+    textAlign: 'center',
   },
   input: {
+    marginBottom: 16,
     backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#ddd',
   },
-  loginButton: {
-    backgroundColor: '#4A90E2',
-    borderRadius: 8,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginTop: 10,
+  button: {
+    marginTop: 16,
+    paddingVertical: 8,
   },
-  loginButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+  error: {
+    color: 'red',
+    textAlign: 'center',
+    marginBottom: 16,
   },
-  signupLink: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  signupText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  signupTextBold: {
-    fontWeight: 'bold',
-    color: '#4A90E2',
+  link: {
+    color: '#007AFF',
+    textAlign: 'center',
+    marginTop: 16,
   },
 }); 
