@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator } from 'react-native';
-import { Card, Chip, Divider } from 'react-native-paper';
+import { Card, Chip } from 'react-native-paper';
 import { useLocalSearchParams } from 'expo-router';
 import { API } from '@/Utils/api';
 
@@ -43,7 +43,7 @@ const WorkoutDetail = () => {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style="flex-1 bg-gray-100">  
       <Image source={{ uri: workout.Images[0] }} style={styles.image} />
       <View style={styles.content}>
         <Text style={styles.title}>{workout.Name}</Text>
