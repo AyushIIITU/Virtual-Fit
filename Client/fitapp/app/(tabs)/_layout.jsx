@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
-
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 export default function TabLayout() {
   return (
     <Tabs screenOptions={{ 
@@ -27,7 +27,7 @@ export default function TabLayout() {
         options={{
           title: "Chat Bot",
           tabBarIcon: ({ color }) => (
-            <FontAwesome name="bot" size={24} color={color} />
+            <FontAwesome5 name="robot" size={24} color={color} />
           ),
         }}
       />

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	// "github.com/AyushIIITU/virtualfit/internal/models"
 	"github.com/AyushIIITU/virtualfit/internal/models"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -113,8 +114,19 @@ func (m *MongoDB) CreateFoodIntake(ctx context.Context, foodIntake *models.FoodI
 	if err != nil {
 		return nil, err
 	}
-	foodIntake.ID = result.InsertedID.(bson.ObjectID)
+	// Convert ObjectID to string if foodIntake.ID is a string type
+	foodIntake.ID = result.InsertedID.(bson.ObjectID).Hex()
 	return foodIntake, nil
+}
+
+func (m *MongoDB) UpdateFoodIntake(ctx context.Context, foodIntake *models.FoodIntake) error {
+	collection := m.db.Collection("food_intakes")
+	_, err := collection.UpdateOne(
+		ctx,
+		bson.M{"_id": foodIntake.ID},
+		bson.M{"$set": foodIntake},
+	)
+	return err
 }
 
 func (m *MongoDB) GetFoodIntakeByID(ctx context.Context, id bson.ObjectID) (*models.FoodIntake, error) {
@@ -142,21 +154,6 @@ func (m *MongoDB) ListUserFoodIntake(ctx context.Context, userID bson.ObjectID) 
 	return foodIntakes, nil
 }
 
-func (m *MongoDB) UpdateFoodIntake(ctx context.Context, foodIntake *models.FoodIntake) error {
-	_, err := m.db.Collection("food_intakes").UpdateOne(
-		ctx,
-		bson.M{"_id": foodIntake.ID},
-		bson.M{"$set": bson.M{
-			"food_name":    foodIntake.FoodName,
-			"nutrients":    foodIntake.Nutrients,
-			"ingredients":  foodIntake.Ingredients,
-			"status":       foodIntake.Status,
-			"updated_at":   foodIntake.UpdatedAt,
-		}},
-	)
-	return err
-}
-
 func (m *MongoDB) GetWorkout(ctx context.Context, nameFilter string) ([]*models.Workout, error) {
 	collection := m.db.Collection("workouts")
 	// Create a filter to search for workouts by name
@@ -181,7 +178,7 @@ func (m *MongoDB) GetWorkout(ctx context.Context, nameFilter string) ([]*models.
 // GetWorkoutPaginated returns a paginated list of workouts and the total count
 func (m *MongoDB) GetWorkoutPaginated(ctx context.Context, nameFilter string, limit, offset int) ([]*models.Workout, int64, error) {
 	collection := m.db.Collection("workouts")
-	
+
 	// Create a filter to search for workouts by name
 	filter := bson.M{}
 	if nameFilter != "" {
@@ -219,40 +216,40 @@ func (m *MongoDB) GetWorkoutPaginated(ctx context.Context, nameFilter string, li
 // SearchWorkouts searches for workouts based on the provided criteria
 func (m *MongoDB) SearchWorkouts(ctx context.Context, criteria models.WorkoutSearchCriteria) ([]*models.Workout, int64, error) {
 	collection := m.db.Collection("workouts")
-	
+
 	// Build the filter based on search criteria
 	filter := bson.M{}
-	
+
 	// Add name filter if provided
 	if criteria.Name != "" {
 		filter["name"] = bson.M{"$regex": criteria.Name, "$options": "i"}
 	}
-	
+
 	// Add category filter if provided
 	if criteria.Category != "" {
 		filter["category"] = bson.M{"$regex": criteria.Category, "$options": "i"}
 	}
-	
+
 	// Add level filter if provided
 	if criteria.Level != "" {
 		filter["level"] = bson.M{"$regex": criteria.Level, "$options": "i"}
 	}
-	
+
 	// Add equipment filter if provided
 	if criteria.Equipment != "" {
 		filter["equipment"] = bson.M{"$regex": criteria.Equipment, "$options": "i"}
 	}
-	
+
 	// Add force filter if provided
 	if criteria.Force != "" {
 		filter["force"] = bson.M{"$regex": criteria.Force, "$options": "i"}
 	}
-	
+
 	// Add mechanic filter if provided
 	if criteria.Mechanic != "" {
 		filter["mechanic"] = bson.M{"$regex": criteria.Mechanic, "$options": "i"}
 	}
-	
+
 	// Add muscle filter if provided (search in both primary and secondary muscles)
 	if criteria.Muscle != "" {
 		filter["$or"] = []bson.M{

@@ -49,6 +49,8 @@ func main() {
 		public.GET("/workout", handler.ListWorkoutAPI)
 		public.GET("/workout/search", handler.SearchWorkoutAPI)
 		public.GET("/workout/:id/:imageName", handler.GetWorkoutImage)
+		// Food image routes
+		public.GET("/food-images/:filename", handler.ServeFoodImage)
 	}
 
 	// Protected routes

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { View, Text, TextInput, TouchableOpacity, FlatList, Image, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import Markdown from 'react-native-markdown-display';
 const API_URL = "192.168.90.168:8000"; // Update this
 
 const Chatbot = () => {
@@ -342,9 +342,11 @@ const Chatbot = () => {
       {item.image && (
         <Image source={{ uri: item.image }} className="w-40 h-40 rounded-xl mb-1" />
       )}
+     
       <Text className={item.sender === "user" ? "text-white" : item.isError ? "text-red-700" : "text-black"}>
-        {item.text}
+      <Markdown>{item.text}</Markdown>
       </Text>
+      
     </View>
   );
 

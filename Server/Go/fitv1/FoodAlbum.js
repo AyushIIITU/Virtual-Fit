@@ -95,29 +95,30 @@ export default function FoodAlbum() {
       Alert.alert('Authentication Error', 'Please log in again');
       return;
     }
-  
+    
     setLoading(true);
     try {
       const formData = new FormData();
-  
-      const uriParts = imageAsset.uri.split('.');
-      const fileExtension = uriParts[uriParts.length - 1];
-      const mimeType = fileExtension === 'jpg' ? 'image/jpeg' : `image/${fileExtension}`;
-  
+      
+      // Create a proper file object for upload
+      const fileExtension = imageAsset.uri.split('.').pop();
+      const mimeType = `image/${fileExtension === 'jpg' ? 'jpeg' : fileExtension}`;
+      
       formData.append('image', {
         uri: imageAsset.uri,
         name: `food_${Date.now()}.${fileExtension}`,
         type: mimeType,
       });
-  
+      
       const response = await axios.post(`${API}/v1/food-intake`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`,
         },
       });
-  
-      if (response.data?.food_id) {
+      
+      if (response.data && response.data.food_id) {
+        // Start polling for status
         pollFoodIntakeStatus(response.data.food_id);
       }
     } catch (error) {
@@ -130,40 +131,33 @@ export default function FoodAlbum() {
       setLoading(false);
     }
   };
-  
 
-  const pollFoodIntakeStatus = async (foodId, attempt = 0) => {
-    const maxAttempts = 15;
-  
+  const pollFoodIntakeStatus = async (foodId) => {
     try {
       const response = await axios.get(`${API}/v1/food-intake/${foodId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-  
+
       if (response.data.status === true) {
+        // Processing complete, refresh the list
         await fetchFoodIntakes();
         Alert.alert('Success', 'Food analysis complete!');
-      } else if (attempt < maxAttempts) {
-        setTimeout(() => pollFoodIntakeStatus(foodId, attempt + 1), 5000);
       } else {
-        Alert.alert('Timeout', 'Processing took too long. Try again later.');
+        // Still processing, poll again after delay
+        setTimeout(() => pollFoodIntakeStatus(foodId), 2000);
       }
     } catch (error) {
       console.error('Error polling status:', error);
     }
   };
-  
+
   const renderFoodItem = (item) => {
-    if (__DEV__) {
-      console.log(item);
-    }
-  
-    const imageUrl = item.imageUrl 
-      ? `${API}/v1/food-image${item.imageUrl.startsWith('/') ? item.imageUrl : '/' + item.imageUrl}`
-      : null;
-  
+    const imageUrl = item.imageUrl ? `${API}/v1/food-images/${item.imageUrl.split('/').pop()}` : null;
+    
     return (
-      <View key={item._id || item.imageUrl || Math.random()} style={styles.foodItem}>
+      <View key={item._id} style={styles.foodItem}>
         {imageUrl && (
           <Image
             source={{ uri: imageUrl }}
@@ -176,7 +170,7 @@ export default function FoodAlbum() {
             <Text style={styles.processingText}>Processing...</Text>
           ) : (
             <>
-              {item.nutrients?.length > 0 && (
+              {item.nutrients && item.nutrients.length > 0 && (
                 <View style={styles.nutrientsContainer}>
                   {item.nutrients.map((nutrient, idx) => (
                     <Text key={idx} style={styles.nutritionText}>
@@ -185,7 +179,7 @@ export default function FoodAlbum() {
                   ))}
                 </View>
               )}
-              {item.ingredients?.length > 0 && (
+              {item.ingredients && item.ingredients.length > 0 && (
                 <Text style={styles.ingredientsText}>
                   Ingredients: {item.ingredients.join(', ')}
                 </Text>
@@ -196,7 +190,6 @@ export default function FoodAlbum() {
       </View>
     );
   };
-  
 
   return (
     <View style={styles.container}>
@@ -317,4 +310,4 @@ const styles = StyleSheet.create({
     color: '#444',
     fontSize: 14,
   },
-});
+}); 

@@ -17,3 +17,5 @@ env/
 models/
 # Ignore entire Dataset folder
 Dataset/
+
+uploads/
