@@ -1,6 +1,6 @@
-# AyushiIITU Virtual Fit 💪
+# Virtual Fit 💪
 
-**AyushiIITU Virtual Fit** is a full-stack virtual fitness application that combines a feature-rich mobile app built with **React Native + Expo** and a robust backend powered by both **Go** and **Python**. It offers real-time fitness tracking, pose detection, nutrition recommendations, and an intelligent fitness chatbot.
+**Virtual Fit** is a full-stack virtual fitness application that combines a feature-rich mobile app built with **React Native + Expo** and a robust backend powered by both **Go** and **Python**. It offers real-time fitness tracking, pose detection, nutrition recommendations, and an intelligent fitness chatbot.
 
 ## 🏗️ Project Structure
 
