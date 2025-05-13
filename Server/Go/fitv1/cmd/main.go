@@ -14,6 +14,8 @@ import (
 	"github.com/AyushIIITU/virtualfit/internal/middleware"
 	"github.com/AyushIIITU/virtualfit/internal/repository"
 	"github.com/AyushIIITU/virtualfit/internal/service"
+
+	// "github.com/AyushIIITU/virtualfit/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -71,6 +73,10 @@ func main() {
 		protected.GET("/food-intake/:id", handler.GetFoodIntakeStatus)
 		protected.GET("/food-intake", handler.ListUserFoodIntake)
 
+		// Chat routes
+		protected.POST("/chat", handler.StoreSocketID)
+		protected.GET("/chat/:id", handler.GetAllSocketIDs)
+		protected.DELETE("/chat/:id", handler.DisconnectSocket)
 	}
 
 	// Create server
